@@ -1,0 +1,142 @@
+settings:
+
+  # حداکثر تعداد پیام بررسی‌شده از هر کانال در هر اجرا
+  poll_limit: 100
+
+  # اجرای آزمایشی
+  # true  = فقط پیش‌نمایش در لاگ، چیزی منتشر نمی‌شود
+  # false = انتشار واقعی
+  # (هنگام اجرای دستی Workflow می‌توانی این مقدار را override کنی)
+  dry_run: true
+
+  # latest     = فقط از پست‌های جدید به بعد
+  # from_start = پردازش تاریخچه (به‌تدریج، poll_limit پست در هر اجرا)
+  first_run_behavior: latest
+
+  state_db: data/state.sqlite3
+  log_level: INFO
+
+  # پست‌های جدیدتر از این مدت (ثانیه) صبر می‌کنند تا آلبوم کامل شود
+  settle_seconds: 60
+
+  # هر پست ناموفق این‌قدر دوباره تلاش می‌شود، بعد رد می‌شود
+  max_retries: 3
+
+  # فاصله بین ارسال‌ها (ثانیه) برای جلوگیری از FloodWait
+  send_delay: 1.0
+
+  # فایل‌های بزرگ‌تر از این (مگابایت) رد می‌شوند
+  max_file_mb: 200
+
+  # حداکثر طول کپشن مدیا (حساب عادی 1024، پریمیوم 4096)
+  # کپشن بلندتر به‌صورت پیام جدا بعد از مدیا ارسال می‌شود
+  caption_limit: 1024
+
+  # FloodWait تا این مقدار (ثانیه) صبر می‌شود، بیشتر از آن اجرا متوقف می‌شود
+  max_flood_wait: 120
+
+  # بعد از این مدت (ثانیه) پست جدیدی شروع نمی‌شود (وضعیت ذخیره می‌شود)
+  max_runtime_seconds: 480
+
+  # auto     = ارسال مجدد مدیا بدون دانلود (سریع)، در صورت خطا دانلود+آپلود
+  # download = همیشه دانلود و آپلود
+  media_mode: auto
+
+  # سوابق پست‌های پردازش‌شده قدیمی‌تر از این (روز) پاک می‌شوند
+  state_keep_days: 30
+
+sources:
+
+  # کانال اول: فقط موسیقی
+  - name: "Music Channel"
+    peer: "@example_music_channel"
+    enabled: false
+
+    allowed_types:
+      - music
+
+    destinations:
+      - "@destination_channel"
+
+    text_rules:
+      remove_telegram_links: true
+      remove_usernames: false
+      remove_mentions: false
+      remove_hashtags: false
+      remove_external_links: false
+      remove_caption: false
+
+    link_preview: false
+
+  # کانال دوم: عکس و ویدئو
+  - name: "Media Channel"
+    peer: "@example_media_channel"
+    enabled: false
+
+    allowed_types:
+      - photo
+      - video
+
+    destinations:
+      - "@destination_group"
+
+    text_rules:
+      remove_telegram_links: true
+      remove_usernames: true
+      remove_mentions: false
+      remove_hashtags: false
+      remove_external_links: false
+      remove_caption: false
+
+      # پستی که یکی از این کلمات را داشته باشد منتشر نمی‌شود (مثلاً تبلیغات)
+      skip_if_contains:
+        - "تبلیغ"
+
+      # خطی که یکی از این عبارت‌ها را داشته باشد حذف می‌شود
+      drop_lines_containing:
+        - "عضو شوید"
+        - "join us"
+
+      # متن ثابت انتهای هر پست (HTML مجاز است)
+      # append_text: "📢 @my_channel"
+
+  # کانال سوم: همه محتواها با مسیرهای متفاوت
+  # peer می‌تواند آیدی عددی هم باشد، مثل -1001234567890
+  - name: "Mixed Channel"
+    peer: "@example_mixed_channel"
+    enabled: false
+
+    allowed_types:
+      - text
+      - photo
+      - video
+      - music
+      - voice
+      - document
+
+    destinations:
+      - "@general_destination"
+
+    routes:
+      music:
+        - "@music_destination"
+      photo:
+        - "@photo_destination"
+      video:
+        - "@video_destination"
+      text:
+        - "@text_destination"
+      default:
+        - "@general_destination"
+
+    text_rules:
+      remove_telegram_links: true
+      remove_usernames: true
+      remove_mentions: true
+      remove_hashtags: false
+      remove_external_links: false
+      remove_caption: false
+
+    # کانال‌های دارای «محدودیت ذخیره/فوروارد» (Content Protection)
+    # به‌طور پیش‌فرض رد می‌شوند. (توصیه می‌شود true بماند)
+    respect_noforwards: true

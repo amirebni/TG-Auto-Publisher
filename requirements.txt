@@ -1,0 +1,2 @@
+Telethon>=1.40,<2.0
+PyYAML>=6.0

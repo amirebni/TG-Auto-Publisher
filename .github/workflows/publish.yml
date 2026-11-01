@@ -1,0 +1,65 @@
+name: Telegram Auto Publisher
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "dry_run: config = use config.yaml, true = preview only, false = publish for real"
+        type: choice
+        default: config
+        options:
+          - config
+          - "true"
+          - "false"
+
+  schedule:
+    # GitHub may delay scheduled runs. Private repos have a monthly
+    # free-minutes quota; a longer interval (e.g. */15) uses fewer minutes.
+    - cron: "*/5 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tg-auto-publisher
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install requirements
+        run: pip install -r requirements.txt
+
+      - name: Install cryptg (faster file transfer, optional)
+        continue-on-error: true
+        run: pip install cryptg
+
+      - name: Restore state
+        run: bash scripts/state.sh restore
+
+      - name: Run publisher
+        env:
+          TG_API_ID: ${{ secrets.TG_API_ID }}
+          TG_API_HASH: ${{ secrets.TG_API_HASH }}
+          TG_SESSION: ${{ secrets.TG_SESSION }}
+          DRY_RUN: ${{ (inputs.dry_run == 'true' || inputs.dry_run == 'false') && inputs.dry_run || '' }}
+          PYTHONUNBUFFERED: "1"
+        run: python -m app.main
+
+      - name: Save state
+        if: always()
+        env:
+          STATE_REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+        run: bash scripts/state.sh save
